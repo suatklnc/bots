@@ -204,34 +204,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def new_file_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     create_new_excel(chat_id)
-    # Bitti butonunu içeren klavye
-    keyboard = ReplyKeyboardMarkup([["Bitti"]], resize_keyboard=True)
-    await update.message.reply_text("📘 Yeni dosya oluşturuldu. Yeni kayda başlıyorum.\n1) Kitap adı nedir?", reply_markup=keyboard)
+    # Bitti butonu göstermiyoruz, sadece ilk soru
+    await update.message.reply_text("📘 Yeni dosya oluşturuldu. Yeni kayda başlıyorum.\n1) Kitap adı nedir?")
     return ASK_NAME
 
 # Sorular akışı
 async def ask_author(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["name"] = update.message.text.strip()
-    keyboard = ReplyKeyboardMarkup([["Bitti"]], resize_keyboard=True)
-    await update.message.reply_text("2) Yazar?", reply_markup=keyboard)
+    # Bitti butonu göstermiyoruz
+    await update.message.reply_text("2) Yazar?")
     return ASK_AUTHOR
 
 async def ask_place(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["author"] = update.message.text.strip()
-    keyboard = ReplyKeyboardMarkup([["Bitti"]], resize_keyboard=True)
-    await update.message.reply_text("3) Yayın yeri?", reply_markup=keyboard)
+    # Bitti butonu göstermiyoruz
+    await update.message.reply_text("3) Yayın yeri?")
     return ASK_PLACE
 
 async def ask_publisher(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["place"] = update.message.text.strip()
-    keyboard = ReplyKeyboardMarkup([["Bitti"]], resize_keyboard=True)
-    await update.message.reply_text("4) Yayın evi?", reply_markup=keyboard)
+    # Bitti butonu göstermiyoruz
+    await update.message.reply_text("4) Yayın evi?")
     return ASK_PUBLISHER
 
 async def ask_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["publisher"] = update.message.text.strip()
-    keyboard = ReplyKeyboardMarkup([["Bitti"]], resize_keyboard=True)
-    await update.message.reply_text("5) Yayın tarihi?", reply_markup=keyboard)
+    # Son soru - Bitti butonu yok, sadece soru
+    await update.message.reply_text("5) Yayın tarihi?")
     return ASK_DATE
 
 async def save_and_continue(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -256,9 +255,26 @@ async def save_and_continue(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"✅ {no}. kitap kaydedildi!\n\nYeni kitap eklemek için bilgileri girin veya \"Bitti\" butonuna basın.\n1) Kitap adı nedir?", reply_markup=keyboard)
     return ASK_NAME
 
-# "Bitti" handler - döngüden çıkış
+# "Bitti" handler - döngüden çıkış ve Excel gönderme
 async def finish_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
     context.user_data.clear()
+    
+    # Excel dosyasını otomatik olarak gönder
+    s = get_chat_state(chat_id)
+    if s and os.path.exists(s.get("filename", "")):
+        filename = s["filename"]
+        try:
+            with open(filename, 'rb') as f:
+                await update.message.reply_document(
+                    document=f,
+                    filename=os.path.basename(filename),
+                    caption="📊 Excel dosyanız hazır!"
+                )
+        except Exception as e:
+            logger.error(f"Excel gönderilirken hata: {str(e)}")
+            await update.message.reply_text(f"❌ Dosya gönderilirken hata oluştu: {str(e)}")
+    
     # Ana klavyeyi geri getir
     keyboard = ReplyKeyboardMarkup([
         ["Yeni Dosya"],
@@ -272,22 +288,32 @@ async def finish_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     ok, msg = delete_last(chat_id)
-    keyboard = ReplyKeyboardMarkup([["Bitti"]], resize_keyboard=True)
-    await update.message.reply_text(msg)
-    # silindikten sonra direkt yeni girişe geç
-    await update.message.reply_text("Yeni kitaba geçiyorum…\n1) Kitap adı nedir?", reply_markup=keyboard)
-    return ASK_NAME
+    # Ana klavyeyi geri getir
+    keyboard = ReplyKeyboardMarkup([
+        ["Yeni Dosya"],
+        ["Kitapları Listele", "Excel'i İndir"],
+        ["Son Kitabı Sil", "Son Bilgiyi Düzelt"]
+    ], resize_keyboard=True)
+    await update.message.reply_text(msg, reply_markup=keyboard)
+    # Döngüye girmiyoruz, ana menüye dönüyoruz
+    return ConversationHandler.END
 
-# "Son Bilgiyi Düzelt" -> basit yöntem: sil, sonra yeniden başlat
+# "Son Bilgiyi Düzelt" -> basit yöntem: sil, ana menüye dön
 async def fix_last_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     ok, msg = delete_last(chat_id)
-    keyboard = ReplyKeyboardMarkup([["Bitti"]], resize_keyboard=True)
+    # Ana klavyeyi geri getir
+    keyboard = ReplyKeyboardMarkup([
+        ["Yeni Dosya"],
+        ["Kitapları Listele", "Excel'i İndir"],
+        ["Son Kitabı Sil", "Son Bilgiyi Düzelt"]
+    ], resize_keyboard=True)
     if not ok:
-        await update.message.reply_text(msg)
+        await update.message.reply_text(msg, reply_markup=keyboard)
     else:
-        await update.message.reply_text("Son kayıt silindi. Lütfen bilgileri yeniden girin.\n1) Kitap adı nedir?", reply_markup=keyboard)
-    return ASK_NAME
+        await update.message.reply_text("✅ Son kayıt silindi. \"Yeni Dosya\" butonuna basarak yeniden başlayabilirsiniz.", reply_markup=keyboard)
+    # Döngüye girmiyoruz, ana menüye dönüyoruz
+    return ConversationHandler.END
 
 # "Kitapları Listele" handler
 async def list_books_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -394,25 +420,21 @@ def main():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, ask_author),
             ],
             ASK_AUTHOR: [
-                MessageHandler(filters.Regex("(?i)^Bitti$"), finish_handler),
                 MessageHandler(filters.Regex("(?i)^Kitapları Listele$"), list_books_handler),
                 MessageHandler(filters.Regex("(?i)^Excel'i İndir$"), send_excel_handler),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, ask_place)
             ],
             ASK_PLACE: [
-                MessageHandler(filters.Regex("(?i)^Bitti$"), finish_handler),
                 MessageHandler(filters.Regex("(?i)^Kitapları Listele$"), list_books_handler),
                 MessageHandler(filters.Regex("(?i)^Excel'i İndir$"), send_excel_handler),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, ask_publisher)
             ],
             ASK_PUBLISHER: [
-                MessageHandler(filters.Regex("(?i)^Bitti$"), finish_handler),
                 MessageHandler(filters.Regex("(?i)^Kitapları Listele$"), list_books_handler),
                 MessageHandler(filters.Regex("(?i)^Excel'i İndir$"), send_excel_handler),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, ask_date)
             ],
             ASK_DATE: [
-                MessageHandler(filters.Regex("(?i)^Bitti$"), finish_handler),
                 MessageHandler(filters.Regex("(?i)^Kitapları Listele$"), list_books_handler),
                 MessageHandler(filters.Regex("(?i)^Excel'i İndir$"), send_excel_handler),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, save_and_continue)
