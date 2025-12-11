@@ -16,3 +16,4 @@ StandardError=append:/home/suat/Desktop/bot-20251211T073449Z-1-001/bot/bot.log
 [Install]
 WantedBy=multi-user.target
 
+

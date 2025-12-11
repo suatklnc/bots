@@ -63,9 +63,11 @@ def auto_resize(ws):
         ws.column_dimensions[col_letter].width = max_len + 2
 
 def create_new_excel(chat_id):
+    """Her kullanıcı için ayrı Excel dosyası oluşturur"""
     ensure_dirs()
+    chat_id_str = str(chat_id)  # chat_id'yi her zaman string olarak kullan
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = os.path.join(EXCEL_FOLDER, f"kitaplar_{chat_id}_{timestamp}.xlsx")
+    filename = os.path.join(EXCEL_FOLDER, f"kitaplar_{chat_id_str}_{timestamp}.xlsx")
 
     wb = Workbook()
     ws = wb.active
@@ -80,17 +82,25 @@ def create_new_excel(chat_id):
     wb.save(filename)
 
     state = load_state()
-    state[str(chat_id)] = {"filename": filename, "last_row": 1}
+    state[chat_id_str] = {"filename": filename, "last_row": 1}
     save_state(state)
+    logger.info(f"Yeni Excel dosyası oluşturuldu: chat_id={chat_id_str}, filename={filename}")
     return filename
 
 def get_chat_state(chat_id):
-    return load_state().get(str(chat_id))
+    """Kullanıcının state'ini döndürür - chat_id her zaman string olarak kullanılır"""
+    chat_id_str = str(chat_id)
+    state = load_state().get(chat_id_str)
+    logger.debug(f"get_chat_state: chat_id={chat_id_str}, state={state}")
+    return state
 
 def set_chat_state(chat_id, filename, last_row):
+    """Kullanıcının state'ini kaydeder - chat_id her zaman string olarak kullanılır"""
+    chat_id_str = str(chat_id)
     state = load_state()
-    state[str(chat_id)] = {"filename": filename, "last_row": last_row}
+    state[chat_id_str] = {"filename": filename, "last_row": last_row}
     save_state(state)
+    logger.debug(f"set_chat_state: chat_id={chat_id_str}, filename={filename}, last_row={last_row}")
 
 def append_row(chat_id, name, author, place, pub, date):
     s = get_chat_state(chat_id)
@@ -186,6 +196,7 @@ WELCOME_TEXT = (
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
+    logger.info(f"/start komutu: chat_id={chat_id}")
     # varsa Excel hazırla yoksa oluştur (kullanıcı daha önce dosya oluşturmadıysa)
     if not get_chat_state(chat_id):
         create_new_excel(chat_id)
@@ -317,6 +328,7 @@ async def fix_last_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # "Kitapları Listele" handler
 async def list_books_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
+    logger.info(f"Kitapları listele: chat_id={chat_id}")
     books, error = get_books_list(chat_id)
     
     if error:
@@ -355,6 +367,7 @@ async def list_books_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 # "Excel'i İndir" handler
 async def send_excel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
+    logger.info(f"Excel indir: chat_id={chat_id}")
     s = get_chat_state(chat_id)
     
     if not s:
