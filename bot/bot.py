@@ -180,8 +180,7 @@ WELCOME_TEXT = (
     "- \"Bitti\" butonu ile kitap ekleme işlemini sonlandırabilirsiniz.\n"
     "- \"Kitapları Listele\" ile kayıtlı kitapları görüntüleyebilirsiniz.\n"
     "- \"Excel'i İndir\" ile Excel dosyanızı Telegram üzerinden indirebilirsiniz.\n"
-    "- \"Son Kitabı Sil\" komutuyla en son kaydı silebilirsiniz.\n"
-    "- \"Son Bilgiyi Düzelt\" komutuyla son girişi silip yeniden girmenizi sağlar.\n\n"
+    "- \"Son Exceli Sil\" komutuyla en son kaydı silebilirsiniz.\n"
     "✨ İşlemlere başlamak için \"Yeni Dosya\" butonuna basın.\n"
 )
 
@@ -194,7 +193,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = ReplyKeyboardMarkup([
         ["Yeni Dosya"],
         ["Kitapları Listele", "Excel'i İndir"],
-        ["Son Kitabı Sil", "Son Bilgiyi Düzelt"]
+        ["Son Exceli Sil"]
     ], resize_keyboard=True)
     await update.message.reply_text(WELCOME_TEXT, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
     # Döngüye sokmuyoruz, sadece hoş geldin mesajı
@@ -279,12 +278,12 @@ async def finish_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = ReplyKeyboardMarkup([
         ["Yeni Dosya"],
         ["Kitapları Listele", "Excel'i İndir"],
-        ["Son Kitabı Sil", "Son Bilgiyi Düzelt"]
+        ["Son Exceli Sil"]
     ], resize_keyboard=True)
     await update.message.reply_text("✅ Kitap ekleme işlemi tamamlandı. İsterseniz \"Yeni Dosya\" butonuna basarak tekrar başlayabilirsiniz.", reply_markup=keyboard)
     return ConversationHandler.END
 
-# "Son Kitabı Sil" handler
+# "Son Exceli Sil" handler
 async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     ok, msg = delete_last(chat_id)
@@ -292,7 +291,7 @@ async def delete_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = ReplyKeyboardMarkup([
         ["Yeni Dosya"],
         ["Kitapları Listele", "Excel'i İndir"],
-        ["Son Kitabı Sil", "Son Bilgiyi Düzelt"]
+        ["Son Exceli Sil"]
     ], resize_keyboard=True)
     await update.message.reply_text(msg, reply_markup=keyboard)
     # Döngüye girmiyoruz, ana menüye dönüyoruz
@@ -306,7 +305,7 @@ async def fix_last_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = ReplyKeyboardMarkup([
         ["Yeni Dosya"],
         ["Kitapları Listele", "Excel'i İndir"],
-        ["Son Kitabı Sil", "Son Bilgiyi Düzelt"]
+        ["Son Exceli Sil"]
     ], resize_keyboard=True)
     if not ok:
         await update.message.reply_text(msg, reply_markup=keyboard)
@@ -390,10 +389,8 @@ async def general_text_fallback(update: Update, context: ContextTypes.DEFAULT_TY
         return await list_books_handler(update, context)
     if text == "excel'i indir" or text == "excel indir" or text == "dosyayı indir":
         return await send_excel_handler(update, context)
-    if text == "son kitabı sil" or text == "son kitapı sil" or text == "son kitabı sil.":
+    if text == "son exceli sil" or text == "son excelı sil" or text == "son exceli sil.":
         return await delete_handler(update, context)
-    if text == "son bilgiyi düzelt" or text == "düzelt":
-        return await fix_last_handler(update, context)
     # Eğer diğer metinlerse ConversationHandler sıradaki state'e yönlendirir (normal akış)
     return None
 
@@ -408,8 +405,7 @@ def main():
             MessageHandler(filters.Regex("(?i)^Yeni Dosya$"), new_file_handler),
             MessageHandler(filters.Regex("(?i)^Kitapları Listele$"), list_books_handler),
             MessageHandler(filters.Regex("(?i)^Excel'i İndir$"), send_excel_handler),
-            MessageHandler(filters.Regex("(?i)^Son Kitabı Sil$"), delete_handler),
-            MessageHandler(filters.Regex("(?i)^Son Bilgiyi Düzelt$"), fix_last_handler),
+            MessageHandler(filters.Regex("(?i)^Son Exceli Sil$"), delete_handler),
         ],
         states={
             ASK_NAME: [

@@ -1,0 +1,18 @@
+[Unit]
+Description=Telegram Kitap Kayıt Botu
+After=network.target
+
+[Service]
+Type=simple
+User=suat
+WorkingDirectory=/home/suat/Desktop/bot-20251211T073449Z-1-001/bot
+Environment="PATH=/home/suat/Desktop/bot-20251211T073449Z-1-001/bot/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/home/suat/Desktop/bot-20251211T073449Z-1-001/bot/venv/bin/python3 /home/suat/Desktop/bot-20251211T073449Z-1-001/bot/bot.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/suat/Desktop/bot-20251211T073449Z-1-001/bot/bot.log
+StandardError=append:/home/suat/Desktop/bot-20251211T073449Z-1-001/bot/bot.log
+
+[Install]
+WantedBy=multi-user.target
+
